@@ -3,6 +3,7 @@ Nome: Bruno Mendonça Santos
 
 ATUALIZADO, tudo funcionando
 */
+
 #include <iostream>
 #include <string>
 #include <sstream> 
@@ -47,6 +48,7 @@ void inicializar();
 int add_table(attrib, string);
 void mostrar();
 int find(string);
+int change(attrib,string);
 
 
 string input; // = "9-5+2";
@@ -93,6 +95,19 @@ int find(string nome){
   if(table.prox==table.inicio) return -1;
   for(i=table.inicio; i<table.prox; i++){
     if(symbol_table[i].nome==nome) return i;
+  }
+  return -1;
+}
+
+int change(attrib res,string nome){
+  int i;
+  if(table.prox==table.inicio) return -1;
+  for(i=table.inicio; i<table.prox; i++){
+    if(symbol_table[i].nome==nome){
+      symbol_table[i].nome = nome;
+      symbol_table[i].elem.value = res.value;
+      return i;
+    }
   }
   return -1;
 }
@@ -238,7 +253,7 @@ attrib term(){
         match('=');
         temp = expr();
         res.value = temp.value;
-        add = add_table(res, nome);
+        add = change(res,nome);
       }else res.value = symbol_table[pos].elem.value;
     }
     //res.value = 0;
