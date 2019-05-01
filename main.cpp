@@ -1,19 +1,8 @@
 /*
 Nome: Bruno Mendonça Santos
 
-expressoes aceitas:
-
-variavel=expressao 
-ex:
-x=10+20+30
-y=10+20+x
-
-nao aceita nos seguintes casos:
-
-x=10+y+20
-x+num
+ATUALIZADO, tudo funcionando
 */
-
 #include <iostream>
 #include <string>
 #include <sstream> 
@@ -23,21 +12,28 @@ x+num
 #define NO_OP -1
 #define SUM 1
 #define MINUS 2
-#define VAR -10
+#define MAX 256
 using namespace std;
 
-struct attrib{
+struct attrib {
   char op;
   int value;
   string num;
 };
 
-struct node{
+struct variavel{
   string nome;
   attrib elem;
-  node* next;
 };
 
+struct tabela{
+  int inicio;
+  int prox;
+};
+
+variavel symbol_table[MAX];
+tabela table;
+int pos;
 
 void error(string);
 void print(char);
@@ -45,203 +41,78 @@ int calc(int, int, int);
 attrib expr();
 attrib term();
 attrib rest();
-attrib x();
 void match(char);
 char nextToken();
-string getNome();
-void check();
-node *check(string);
-attrib valor(int);
-char getback();
+void inicializar();
+int add_table(attrib, string);
+void mostrar();
+int find(string);
 
-class linked_list
-{
-private:
-    node *head,*tail;
-public:
-    linked_list()
-    {
-        head = NULL;
-        tail = NULL;
-    }
 
-    void add_node(attrib n, string nome)
-    {
-        node *tmp = new node;
-        tmp->nome = nome;
-        tmp->elem.op = n.op;
-        tmp->elem.value = n.value;
-        tmp->elem.num = n.num;
-        tmp->next = NULL;
-
-        if(head == NULL)
-        {
-            head = tmp;
-            tail = tmp;
-        }
-        else
-        {
-            tail->next = tmp;
-            tail = tail->next;
-        }
-    }
-    node* gethead()
-    {
-        return head;
-    }
-    void display()
-    {
-        node *tmp;
-        
-        tmp = head;
-        while (tmp != NULL)
-        {
-            cout << tmp->nome << endl;
-            tmp = tmp->next;
-        }
-        
-    }
-    node *find2(string nome)
-    {
-        node *tmp, *aux;
-        tmp = head;
-        while (tmp != NULL)
-        {
-            if(tmp->nome == nome){
-              return tmp;
-            }
-            tmp = tmp->next;
-        }
-        return tmp;
-    }
-
-    static void find(node *head, string a)
-    {
-      
-      if(head->nome == a)
-        {
-            cout << "achou" << endl; 
-        }
-        else if(head == NULL)
-        {
-            cout << "NULL" << endl;
-        }
-        else{
-          find(head->next, a);
-        }
-        
-    }
-};
-
-string input;
+string input; // = "9-5+2";
+//<9> <-> <5> <+> <2>
+// --- ANALISADOR LÉXICO
 int count = 0;
-
 char nextToken(){
   if (count == input.length())
     return EOF;
   return input[count++];
 }
-
-char getback(){
-  return input[count--];
-}
+// --- ANALISADOR SINTÁTICO
 char lookahead;
-linked_list symbol_table;
 
-string getNome(){
-  string nome;
-  char look = lookahead;
-  while((look!='=')){
-      nome += look;
-      look = nextToken();
-      lookahead = nextToken();
-      if(look==EOF){
-        //cout <<"aqui 1";
-        break;
-      }else if(isdigit(look)){
-        //cout <<"aqui 2";
-        break;
-      }else if(look=='+'){
-        //lookahead = input[count-2];
-        //if(lookahead == '1') cout<<"isso";
-        //cout <<"aqui 3";
-        break;
-      }else if(look=='-'){
-        //cout <<"aqui 4";
-        break;
-      }
-      //lookahead = nextToken();
-  }
-  return nome;
+
+// --- TABELA DE SIMBOLOS
+void inicializar(){
+  table.inicio = 0;
+  table.prox = 0;
 }
 
-attrib expr(){
-  attrib res, v1, v2, temp;
-  
-  if(isdigit(lookahead)){
-    v1 = term();  
-    v2 = rest();
-    //cout<<v2.value;
-    res.value = calc(v1.value, v2.op, v2.value);
-  }else{
-    node *checar;    
-    string nome = getNome();
-    checar = check(nome);
-    
-    if(checar!=NULL){
-      
-      //v1 = term();
-      //v2 = rest();
-      //res.value = calc(v1.value, v2.op, v2.value);
-      v1.op = NO_OP;
-      v1.value = checar->elem.value;      
-      v2 = rest();
-      res.value = calc(v1.value, v2.op, v2.value);
-      //res = v1;
-      
-    }else{   
-    //cout<<"aqui";
-    v1.op = NO_OP;    
-    //lookahead = nextToken();
-    temp = expr();
-    v1.value = temp.value;
-    res = v1;
-    symbol_table.add_node(res, nome);
-  
-
-    }
-  }
-  
-  return res;
-}
-
-node *check(string nome){
-  
-  node *aux = symbol_table.find2(nome);
-  if(aux!=NULL){
-      
-      return aux;
-  }
+int add_table(attrib elem, string nome){
+  int aux;
+  if(table.prox >= MAX) return -1;
+  symbol_table[table.prox].nome = nome;
+  symbol_table[table.prox].elem.op = elem.op;
+  symbol_table[table.prox].elem.value = elem.value;
+  aux = table.prox;
+  table.prox++;
   return aux;
 }
 
-attrib x(){
-  attrib res, val;
-  res.op = NO_OP;
-  string nome;
-  while((lookahead!='=')){
-      
-      nome += lookahead;
-      lookahead = nextToken();
+void mostrar(){
+  int i;
+  if(table.prox==table.inicio) cout<<"Tabela de simbolos vazia"<<endl;
+  for(i=table.inicio; i<table.prox; i++){
+    cout<<symbol_table[i].nome<<endl;
+    cout<<symbol_table[i].elem.value<<endl;
   }
-  return res;
+}
+
+int find(string nome){
+  int i;
+  if(table.prox==table.inicio) return -1;
+  for(i=table.inicio; i<table.prox; i++){
+    if(symbol_table[i].nome==nome) return i;
+  }
+  return -1;
+}
+
+// --- LEXER
+
+attrib expr(){
+  attrib e, t, r;
+  t = term();
+  r = rest();
+  e.value = calc(t.value, r.op, r.value);
+  
+  
+  return e;
 }
 
 attrib rest(){
   
-  attrib e, t, r;
+  attrib e, t, r, temp;
   e.op = NO_OP;
-  
   if (lookahead == '-'){
      //-term rest
      match('-');
@@ -251,7 +122,6 @@ attrib rest(){
 
   } else if (lookahead == '+'){
     //+term rest
-    //cout<<"aqui";
     match('+');
     e.op = SUM;
     t = term();
@@ -261,74 +131,120 @@ attrib rest(){
     //syntax error?
     error("Sem tempo irmão");
   }
-  
   e.value = calc(t.value, r.op, r.value);
-  
-  
   return e;
 }
 
-int calc(int v1, int op, int v2){
-  
-  switch (op){
-    case NO_OP : return v1;
-    case SUM : return v1+v2;
-    case MINUS : return v1-v2;
-  }
-  return 0;//error
-}
-
 attrib term(){
-  attrib res,v1;
+  int add;
+  string nome;
+  attrib res, temp;
   res.op = NO_OP;
-  if(isdigit(lookahead)){
-  if((lookahead!='+' && lookahead!='-')){
-    
-  while(((lookahead!='+') && (lookahead!='-')) && (lookahead!=EOF) ){
-  
-  
-  switch (lookahead) {
-    case '0': match('0'); res.num += "0"; break;
-    case '1': match('1'); res.num += "1"; break;
-    case '2': match('2'); res.num += "2"; break;
-    case '3': match('3'); res.num += "3"; break;
-    case '4': match('4'); res.num += "4"; break;
-    case '5': match('5'); res.num += "5"; break;
-    case '6': match('6'); res.num += "6"; break;
-    case '7': match('7'); res.num += "7"; break;
-    case '8': match('8'); res.num += "8"; break;
-    case '9': match('9'); res.num += "9"; break;
-    default: error("Number expected.");
-  }
-  
-  }
-  stringstream geek(res.num); 
-  geek >> res.value;
-  }
-  }else{
-    v1 = valor(lookahead);
-    res = v1;
-  }
-  
 
-  //symbol_table.add_node(res);
-  
+  if(isdigit(lookahead)){
+    
+    while((lookahead!='+') && (lookahead!='-') && lookahead!=EOF && lookahead!='='){
+      
+      switch (lookahead) {
+        case '0': match('0'); res.num += "0"; break;
+        case '1': match('1'); res.num += "1"; break;
+        case '2': match('2'); res.num += "2"; break;
+        case '3': match('3'); res.num += "3"; break;
+        case '4': match('4'); res.num += "4"; break;
+        case '5': match('5'); res.num += "5"; break;
+        case '6': match('6'); res.num += "6"; break;
+        case '7': match('7'); res.num += "7"; break;
+        case '8': match('8'); res.num += "8"; break;
+        case '9': match('9'); res.num += "9"; break;
+        default: error("Number expected.");
+      }
+      
+    }
+    stringstream geek(res.num); 
+    geek >> res.value;
+  }else{
+    while((lookahead!='+') && (lookahead!='-') && lookahead!=EOF && lookahead!='='){
+      switch (lookahead){
+        case 'a': match('a'); nome += "a"; break;
+        case 'b': match('b'); nome += "b"; break;
+        case 'c': match('c'); nome += "c"; break;
+        case 'd': match('d'); nome += "d"; break;
+        case 'e': match('e'); nome += "e"; break;
+        case 'f': match('f'); nome += "f"; break;
+        case 'g': match('g'); nome += "g"; break;
+        case 'h': match('h'); nome += "h"; break;
+        case 'i': match('i'); nome += "i"; break;
+        case 'j': match('j'); nome += "j"; break;
+        case 'k': match('k'); nome += "k"; break;
+        case 'l': match('l'); nome += "l"; break;
+        case 'm': match('m'); nome += "m"; break;
+        case 'n': match('n'); nome += "n"; break;
+        case 'o': match('o'); nome += "o"; break;
+        case 'p': match('p'); nome += "p"; break;
+        case 'q': match('q'); nome += "q"; break;
+        case 'r': match('r'); nome += "r"; break;
+        case 's': match('s'); nome += "s"; break;
+        case 't': match('t'); nome += "t"; break;
+        case 'u': match('u'); nome += "u"; break;
+        case 'v': match('v'); nome += "v"; break;
+        case 'w': match('w'); nome += "w"; break;
+        case 'x': match('x'); nome += "x"; break;
+        case 'y': match('y'); nome += "y"; break;
+        case 'z': match('z'); nome += "z"; break;
+        case 'A': match('A'); nome += "A"; break;
+        case 'B': match('B'); nome += "B"; break;
+        case 'C': match('C'); nome += "C"; break;
+        case 'D': match('D'); nome += "D"; break;
+        case 'E': match('E'); nome += "E"; break;
+        case 'F': match('F'); nome += "F"; break;
+        case 'G': match('G'); nome += "G"; break;
+        case 'H': match('H'); nome += "H"; break;
+        case 'I': match('I'); nome += "I"; break;
+        case 'J': match('J'); nome += "J"; break;
+        case 'K': match('K'); nome += "K"; break;
+        case 'L': match('L'); nome += "L"; break;
+        case 'M': match('M'); nome += "M"; break;
+        case 'N': match('N'); nome += "N"; break;
+        case 'O': match('O'); nome += "O"; break;
+        case 'P': match('P'); nome += "P"; break;
+        case 'Q': match('Q'); nome += "Q"; break;
+        case 'R': match('R'); nome += "R"; break;
+        case 'S': match('S'); nome += "S"; break;
+        case 'T': match('T'); nome += "T"; break;
+        case 'U': match('U'); nome += "U"; break;
+        case 'V': match('V'); nome += "V"; break;
+        case 'W': match('W'); nome += "W"; break;
+        case 'X': match('X'); nome += "X"; break;
+        case 'Y': match('Y'); nome += "Y"; break;
+        case 'Z': match('Z'); nome += "Z"; break;
+        default: error("Letter expected.");
+      }
+    }
+    pos = find(nome);
+    if(pos==-1){
+      if(lookahead == '='){
+        match('=');
+        temp = expr();
+        res.value = temp.value;
+        add = add_table(res, nome);
+      }else{
+
+        res.value = 0;
+        add = add_table(res, nome);
+      }
+      
+    }else{
+      if(lookahead == '='){
+        match('=');
+        temp = expr();
+        res.value = temp.value;
+        add = add_table(res, nome);
+      }else res.value = symbol_table[pos].elem.value;
+    }
+    //res.value = 0;
+  }
 
   return res;
-}
-
-attrib valor(int lookahead){
-  attrib res, v1;
-    node *checar;    
-    string nome = getNome();
-    checar = check(nome);
-    if(checar!=NULL){
-      v1.op = NO_OP;
-      lookahead = nextToken();
-      v1.value = checar->elem.value;
-      res = v1;
-    }
-    return res;
 }
 
 void match(char c){
@@ -338,6 +254,15 @@ void match(char c){
     string s = "Found " + to_string(lookahead) + " but expected " + to_string(c);
     error(s);
   }
+}
+
+int calc(int v1, int op, int v2){
+  switch (op){
+    case NO_OP : return v1;
+    case SUM : return v1+v2;
+    case MINUS : return v1-v2;
+  }
+  return 0;//error
 }
 
 void error(string msg){
@@ -350,13 +275,18 @@ void error(string msg){
 
 }
 
+void print(char c){
+  cout << c;
+}
+// --- ENTRYPOINT
 int main(){
+  inicializar();
+
   cout << "$ ";
   getline(cin, input);
   while (!input.empty()){
     lookahead = nextToken();
     attrib e = expr();
-    //symbol_table.find(symbol_table.gethead(), e);
     cout << e.value << endl << "$ ";
     getline(cin, input);
     count = 0;
